@@ -1,7 +1,6 @@
 from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse, Response
 from fastapi.templating import Jinja2Templates
-from fastapi.staticfiles import StaticFiles
 import requests, os
 from dotenv import load_dotenv
 
