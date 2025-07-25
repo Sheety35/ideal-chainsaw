@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Image Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #e3dd29 0%, #11a9ba 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.1);  /* More transparent */
+            backdrop-filter: blur(20px);           /* Increase blur */
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 40px;
+            width: 100%;
+            max-width: 800px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2d3748;
+            margin-bottom: 40px;
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+        
+        .result-area {
+            margin-bottom: 30px;
+            text-align: center;
+            min-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8fafc;
+            border-radius: 15px;
+            border: 2px dashed #cbd5e0;
+            position: relative;
+        }
+        
+        .result-area.has-image {
+            border: none;
+            background: transparent;
+        }
+        
+        .result-image {
+            max-width: 100%;
+            max-height: 400px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .placeholder {
+            color: #a0aec0;
+            font-size: 1.2rem;
+        }
+        
+        .download-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            border-radius: 10px;
+            padding: 10px 15px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            color: #4a5568;
+            transition: all 0.2s;
+            backdrop-filter: blur(5px);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            min-width: 120px;
+            justify-content: center;
+        }
+        
+        .download-btn:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 1);
+            transform: translateY(-2px);
+        }
+        
+        .download-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .download-spinner {
+            width: 14px;
+            height: 14px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #4a5568;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        .input-area {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        }
+        
+        .prompt-container {
+            display: flex;
+            gap: 15px;
+            align-items: flex-end;
+            margin-bottom: 15px;
+        }
+        
+        .prompt-input {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid #e2e8f0;
+            border-radius: 25px;
+            font-size: 16px;
+            outline: none;
+            transition: all 0.2s;
+            resize: none;
+            min-height: 50px;
+            max-height: 120px;
+        }
+        
+        .prompt-input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .generate-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            font-size: 20px;
+        }
+        
+        .generate-btn:hover:not(:disabled) {
+            transform: scale(1.05);
+        }
+        
+        .generate-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .size-selector {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .size-dropdown {
+            padding: 10px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            background: white;
+            font-size: 14px;
+            cursor: pointer;
+            outline: none;
+            transition: all 0.2s;
+        }
+        
+        .size-dropdown:focus {
+            border-color: #667eea;
+        }
+        
+        .error {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        .loading {
+            text-align: center;
+            color: #667eea;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .prompt-container {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .generate-btn {
+                align-self: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>✨ AI Image Generator</h1>
+        
+        <div class="result-area" id="resultArea">
+            {% if image_url %}
+                <img src="{{ image_url }}" alt="Generated Image" class="result-image" id="generatedImage">
+                <button class="download-btn" onclick="downloadImage('{{ image_id }}', '{{ image_url }}')" id="downloadBtn">
+                    <span id="downloadIcon">📥</span>
+                    <span id="downloadText">Download HD</span>
+                </button>
+            {% else %}
+                <div class="placeholder">Your generated image will appear here</div>
+            {% endif %}
+        </div>
+        
+        <form action="/process" method="post" id="generateForm">
+            <input type="hidden" name="mode" value="generate">
+            
+            <div class="input-area">
+                <div class="prompt-container">
+                    <textarea 
+                        name="prompt" 
+                        class="prompt-input" 
+                        placeholder="Describe what you want to generate..." 
+                        required
+                        id="promptInput"
+                    >{% if prompt %}{{ prompt }}{% endif %}</textarea>
+                    <button type="submit" class="generate-btn" id="generateBtn">
+                        <span id="btnIcon">→</span>
+                    </button>
+                </div>
+                
+                <div class="size-selector">
+                    <select name="size" class="size-dropdown">
+                        <option value="1024x1024" {% if not size or size == "1024x1024" %}selected{% endif %}>Square (1024×1024)</option>
+                        <option value="1792x1024" {% if size == "1792x1024" %}selected{% endif %}>Landscape (1792×1024)</option>
+                        <option value="1024x1792" {% if size == "1024x1792" %}selected{% endif %}>Portrait (1024×1792)</option>
+                    </select>
+                </div>
+            </div>
+        </form>
+        
+        {% if error %}
+        <div class="error">
+            {{ error }}
+        </div>
+        {% endif %}
+        
+        <div class="loading" id="loadingMessage" style="display: none;">
+            <div class="spinner"></div>
+            Generating your image...
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('generateForm');
+        const generateBtn = document.getElementById('generateBtn');
+        const btnIcon = document.getElementById('btnIcon');
+        const loadingMessage = document.getElementById('loadingMessage');
+        const resultArea = document.getElementById('resultArea');
+        const promptInput = document.getElementById('promptInput');
+        
+        // Auto-resize textarea
+        promptInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+        
+        // Form submission
+        form.addEventListener('submit', function(e) {
+            generateBtn.disabled = true;
+            btnIcon.innerHTML = '⏳';
+            loadingMessage.style.display = 'block';
+        });
+        
+        // Download function with proper loading state
+        async function downloadImage(imageId, imageUrl) {
+            const downloadBtn = document.getElementById('downloadBtn');
+            const downloadIcon = document.getElementById('downloadIcon');
+            const downloadText = document.getElementById('downloadText');
+            
+            // Show loading state
+            downloadBtn.disabled = true;
+            downloadIcon.innerHTML = '<div class="download-spinner"></div>';
+            downloadText.textContent = 'Downloading...';
+            
+            try {
+                // Use our proxy endpoint for proper download
+                const downloadUrl = `/download/${imageId}?url=${encodeURIComponent(imageUrl)}`;
+                
+                // Fetch the image data
+                const response = await fetch(downloadUrl);
+                
+                if (!response.ok) {
+                    throw new Error('Download failed');
+                }
+                
+                // Get the blob data
+                const blob = await response.blob();
+                
+                // Create download link
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `ai-generated-${imageId}.png`;
+                
+                // Trigger download
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                // Clean up the URL object
+                window.URL.revokeObjectURL(url);
+                
+                // Show success state briefly
+                downloadIcon.textContent = '✅';
+                downloadText.textContent = 'Downloaded!';
+                
+                // Reset after 2 seconds
+                setTimeout(() => {
+                    downloadBtn.disabled = false;
+                    downloadIcon.textContent = '📥';
+                    downloadText.textContent = 'Download HD';
+                }, 2000);
+                
+            } catch (error) {
+                console.error('Download failed:', error);
+                
+                // Show error state
+                downloadIcon.textContent = '❌';
+                downloadText.textContent = 'Failed';
+                
+                // Reset after 3 seconds
+                setTimeout(() => {
+                    downloadBtn.disabled = false;
+                    downloadIcon.textContent = '📥';
+                    downloadText.textContent = 'Download HD';
+                }, 3000);
+            }
+        }
+        
+        // Enter key handling for textarea
+        promptInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                form.submit();
+            }
+        });
+    </script>
+</body>
+</html>
