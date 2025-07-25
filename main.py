@@ -11,7 +11,6 @@ app = FastAPI()
 # For HTML templates and CSS
 templates = Jinja2Templates(directory="templates")
 
-
 # Azure config
 API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
 ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
@@ -98,7 +97,11 @@ def generate_image(
             "size": size
         })
 
-# Health check endpoint for Render
+# Health check endpoint
 @app.get("/health")
 def health_check():
     return {"status": "healthy"}
+
+# This is the handler function for Vercel
+def handler(request):
+    return app(request.scope, request.receive, request.send)
